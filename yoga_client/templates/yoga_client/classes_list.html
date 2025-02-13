@@ -1,0 +1,32 @@
+{% load render_table from django_tables2 %}
+<!doctype html>
+<html lang="en">
+    <head>
+        <title> Classes List</title>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" /> 
+        <style>
+            body {
+                background-color: #eef3e5;
+            }
+            thead tr th {
+                background: #637457;
+            }
+            thead tr th a {
+                color: #a8a8a8;
+            }
+            tbody tr {
+                color: #575757;
+            }
+            tbody tr td a {
+                color: #a8a8a8;
+                
+                background-color: #637457;
+                border: #575757;
+            }
+        </style>
+    </head>
+    <body>
+            {% render_table table %}
+    </body>
+    
+</html>

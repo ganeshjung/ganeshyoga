@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YogaClasses FilterSet</title>
+</head>
+<body>
+    <h1> Yoga Classes Filters</h1>
+    <form id="filterform" method="get" >
+        <label for="classtype">Class Type</label>
+        <select name="class_type" id="classtype">
+            <option value="">Select Class Type</option>
+            {% for cls_node in data.organizationClasstypes.edges %}
+                <option value="{{cls_node.node.id}}">{{cls_node.node.name}}</option>
+            {% endfor %}
+        </select>
+        <label for="eventlevel">Event Level</label>
+        <select name="event_level" id="eventlevel">
+            <option value="">Select Class Level</option>
+            {% for cls_node in data.organizationLevels.edges %}
+                <option value="{{cls_node.node.id}}">{{cls_node.node.name}}</option>
+            {% endfor %}
+        </select>
+        <button type="button" onclick="updatePage()">Filter</button>
+    </form>
+
+   <p>Generated URL is : <input id="targetUrl" value="{% url 'index' %}"/> <button onclick="copyText()"> Copy</button></p>
+    <iframe src="{% url 'index' %}"   width="80%" style="height: 70vh;" id="indexPage" title="Preview"></iframe>
+
+    <script>
+        function copyText(){
+            let mytext = document.getElementById('targetUrl');
+            mytext.select();
+            mytext.setSelectionRange(0,9999);
+            navigator.clipboard.writeText(mytext.value);
+            alert('text copied');
+        }
+        function updatePage() {
+            let form = document.getElementById('filterform');
+            let data = new FormData(form);
+            let params = new URLSearchParams()
+            if (data.get('class_type')){
+                params.append('class_type', data.get('class_type'))
+            }
+            if (data.get('event_level')){
+                params.append('event_level', data.get('event_level'))
+            }
+            let newURL = document.location.protocol + '//'+ document.location.host + '/?' + params.toString();            
+            document.getElementById('indexPage').setAttribute('src', newURL);
+            
+            let mytext = document.getElementById('targetUrl');
+            mytext.value = newURL;
+        }
+    </script>
+</body>
+</html>

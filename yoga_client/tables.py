@@ -8,33 +8,28 @@ t_fmt = '%H:%M:%S'
 class ScheduleClassTable(tables.Table):
     date = tables.DateColumn(format='Y-m-d', short=True)
     timeStart = tables.Column(verbose_name="Time")
-    frequencyType = tables.Column(verbose_name="FreqType", visible=False)
-    account = tables.Column(verbose_name="Instructor", visible=False)
-    organizationLocationRoom = tables.Column(verbose_name="Room", visible=False)
-    organizationLocation = tables.Column(verbose_name="Location", visible=False)
-    organizationClasstype = tables.Column(verbose_name="Title")
-    organizationLevel = tables.Column(verbose_name="Level", visible=False)
-    
+    scheduleType = tables.Column(verbose_name="scheduleType", visible=False)
+    title = tables.Column()
     timeEnd = tables.Column(visible=False)
-    spaces = tables.Column(visible=False)
-    countAttending = tables.Column(visible=False)
-    countBooked = tables.Column(visible=False)
-    availableSpacesOnline = tables.Column(visible=False)
-    availableSpacesTotal = tables.Column(visible=False)
     bookingStatus = tables.BooleanColumn(verbose_name='Action')
     scheduleItemId = tables.Column(visible=False)
 
     def render_bookingStatus(self,value, record):
-        if value:
-            return format_html("<a class='btn' target='blank' href='https://book.ganeshyoga.de/#/shop/classes/book/{}/{}'> Book</a>", record['scheduleItemId'], record['date'])
+        if record['scheduleType'] == "class":
+            if value:
+                return format_html("<a class='btn' target='blank' href='https://book.ganeshyoga.de/#/shop/classes/book/{}/{}'> Book</a>", record['scheduleItemId'], record['date'])
+            else:
+                return ""
         else:
-            return ""
+            if value:
+                return format_html("<a class='btn' target='blank' href='https://book.ganeshyoga.de/#/shop/events/{}'>Book</a>", record['scheduleItemId'] )
+            else: 
+                return "No data {}".format(value)
     
     def render_timeStart(self, value, record):
-        return format_html('<b> {} - {}</b>', value, record['timeEnd'])
-    
-    def render_spaces(self, value, record):
-        return f"{record['availableSpacesTotal']} out of {value} available"
+        value = ':'.join(value.split(':')[:2])
+        time_end = ':'.join(record['timeEnd'].split(':')[:2])
+        return format_html('<b> {} - {}</b>', value, time_end)
     
 
     def render_date(self, value, record):

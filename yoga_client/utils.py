@@ -63,19 +63,10 @@ def filter_active_class(data: dict) -> list[dict]:
 
         Sample Output Data:
                   { 'date': '2025-02-10',
-                   'frequencyType': 'WEEKLY',
-                   'account': 'Ganesh Puri',
-                   'organizationLocationRoom': 'Yogaraum',
-                   'organizationLocation': 'Schieggashram', 
+                    'scheduleType': 'class', # default value
                    'organizationClasstype': 'Hatha Yoga für Anfänger und Fortgeschrittene', 
-                   'organizationLevel': 'Anfänger und Fortgeschrittene ',
                    'timeStart': '18:30:00', 
                     'timeEnd': '20:00:00',
-                    'spaces': 15, 
-                    'countAttending': 0, 
-                    'countBooked': 0, 
-                    'availableSpacesOnline': 15, 
-                    'availableSpacesTotal': 15, 
                     'bookingStatus': 'FINISHED',
                     'scheduleItemId': 'U2NoZWR1bGVJdGVtTm9kZToyMA==',
                     }
@@ -88,19 +79,10 @@ def filter_active_class(data: dict) -> list[dict]:
             for class_data in row['classes']:
                 row_data = {
                    'date': class_data['date'],
-                   'frequencyType': class_data['frequencyType'],
-                   'account': class_data['account']['fullName'],
-                   'organizationLocationRoom': class_data['organizationLocationRoom']['name'],
-                   'organizationLocation': class_data['organizationLocationRoom']['organizationLocation']['name'],
-                   'organizationClasstype': class_data['organizationClasstype']['name'], 
-                   'organizationLevel': class_data['organizationLevel']['name'],
+                   'scheduleType': "class",
+                   'title': class_data['organizationClasstype']['name'], 
                    'timeStart': class_data['timeStart'], 
                     'timeEnd': class_data['timeEnd'],
-                    'spaces': class_data['spaces'], 
-                    'countAttending': class_data['countAttending'], 
-                    'countBooked': class_data['countBooked'], 
-                    'availableSpacesOnline': class_data['availableSpacesOnline'], 
-                    'availableSpacesTotal': class_data['availableSpacesTotal'], 
                     'bookingStatus': class_data['bookingStatus'],
                     'scheduleItemId': class_data['scheduleItemId'],
                     } 
@@ -131,7 +113,7 @@ def upcoming_classess(start_date: str, level: str = "", classtype: str = '')-> l
         if res.status_code == 200:
             filtered_data = filter_active_class(res.json())
         else:
-            print("We are not able to get any data. Reason: ", res.content)
+            print("We are not able to get any data. Reason:", res.content)
             return []
         
         return filtered_data
@@ -140,19 +122,25 @@ def upcoming_classess(start_date: str, level: str = "", classtype: str = '')-> l
 def get_upcoming_classes(start_date, level="", classtype="", class_count=10):
     """ This function will bring number of upcoming classes by class_count
     """
+    filtered_event = []
     upcoming_class_data = []
     start_count = 0
     while start_count < class_count:
         # we need to keep looping until we atleast got 10 class for result
         filtered_data = upcoming_classess(start_date=start_date, level=level, classtype=classtype)
+        end_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=7)).strftime(d_fmt)
+        filtered_event = get_schedule_events(start_date=start_date, end_date=end_date)
         if len(filtered_data) == 0:
             # No data received, we should assume no schedule is uploaded
             break
         else:
-            start_count += len(filtered_data)
-            upcoming_class_data += filtered_data
+            start_count += ( len(filtered_data ) + len(filtered_event))
+            upcoming_class_data += ( filtered_data + filtered_event)
         
-        start_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=6)).strftime(d_fmt)
+        # change, next_start date to 7. Not 6
+        start_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=7)).strftime(d_fmt)
+    
+
     
     return upcoming_class_data
 
@@ -217,5 +205,156 @@ def get_filter_set() -> dict:
     return filter_set
 
 
-
+def filter_all_future_events(data: dict, start_date: str, end_date: str) -> list[dict]:
+    """ This will filter all future upcoming events taking start_date
     
+    Sample data:
+    {
+  "scheduleEvents": {
+    "pageInfo": {
+      "hasNextPage": false,
+      "hasPreviousPage": false,
+      "startCursor": "YXJyYXljb25uZWN0aW9uOjA=",
+      "endCursor": "YXJyYXljb25uZWN0aW9uOjU=",
+      "__typename": "PageInfo"
+    },
+    "edges": [
+      {
+        "node": {
+          "id": "U2NoZWR1bGVFdmVudE5vZGU6MQ==",
+          "archived": false,
+          "displayPublic": true,
+          "displayShop": true,
+          "autoSendInfoMail": false,
+          "organizationLocation": {
+            "id": "T3JnYW5pemF0aW9uTG9jYXRpb25Ob2RlOjI=",
+            "name": "Schieggashram",
+            "__typename": "OrganizationLocationNode"
+          },
+          "name": "Lakshmi Puja zur Wintersonnwende",
+          "tagline": "Am dunkelsten Tag des Jahres feiern wir eine Puja zu Ehren von Lakshmi, der Göttin des Lichts.",
+          "preview": "<p>Pujaabend mit Asanas, Meditation, Verehrung der G&ouml;ttin, Abendessen, Musik und je nach Wetter und Stimmung Tanz oder Feuer im Garten.</p>",
+          "description": "<ul class=\"n8H08c UVNKR \">\n<li class=\"zfr3Q TYR86d eD0Rn \" dir=\"ltr\">\n<p class=\"zfr3Q CDt4Ke \" dir=\"ltr\" role=\"presentation\"><span class=\"C9DxTc \">16:00 Yogastunde</span></p>\n</li>\n<li class=\"zfr3Q TYR86d eD0Rn \" dir=\"ltr\">\n<p class=\"zfr3Q CDt4Ke \" dir=\"ltr\" role=\"presentation\"><span class=\"C9DxTc \">18:00 Puja mit Asanas, Meditation, Verehrung der G&ouml;ttin, Abendessen und Musik</span></p>\n</li>\n<li class=\"zfr3Q TYR86d eD0Rn \" dir=\"ltr\">\n<p class=\"zfr3Q CDt4Ke \" dir=\"ltr\" role=\"presentation\"><span class=\"C9DxTc \">20:00 Yoga Ecstatic Dance und/oder Feuer im Garten</span></p>\n</li>\n</ul>",
+          "organizationLevel": {
+            "id": "T3JnYW5pemF0aW9uTGV2ZWxOb2RlOjI=",
+            "name": "Anfänger und Fortgeschrittene ",
+            "__typename": "OrganizationLevelNode"
+          },
+          "instructor": {
+            "id": "QWNjb3VudE5vZGU6Mw==",
+            "fullName": "Ganesh   ",
+            "__typename": "AccountNode"
+          },
+          "instructor2": null,
+          "dateStart": "2024-12-21",
+          "dateEnd": "2024-12-21",
+          "timeStart": "16:00:00",
+          "timeEnd": "21:00:00",
+          "infoMailContent": "",
+          "scheduleItems": {
+            "edges": [
+              {
+                "node": {
+                  "id": "U2NoZWR1bGVJdGVtTm9kZTo2",
+                  "__typename": "ScheduleItemNode"
+                },
+                "__typename": "ScheduleItemNodeEdge"
+              },
+              {
+                "node": {
+                  "id": "U2NoZWR1bGVJdGVtTm9kZTo3",
+                  "__typename": "ScheduleItemNode"
+                },
+                "__typename": "ScheduleItemNodeEdge"
+              },
+              {
+                "node": {
+                  "id": "U2NoZWR1bGVJdGVtTm9kZTo4",
+                  "__typename": "ScheduleItemNode"
+                },
+                "__typename": "ScheduleItemNodeEdge"
+              }
+            ],
+            "__typename": "ScheduleItemNodeConnection"
+          },
+          "media": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "hasPreviousPage": false,
+              "startCursor": "YXJyYXljb25uZWN0aW9uOjA=",
+              "endCursor": "YXJyYXljb25uZWN0aW9uOjA=",
+              "__typename": "PageInfo"
+            },
+            "edges": [
+              {
+                "node": {
+                  "urlImageThumbnailSmall": "/d/media/cache/0c/66/0c66889766c8f9f3920eda7435fe402d.jpg",
+                  "urlImageThumbnailLarge": "/d/media/cache/97/41/9741dcb31667f169b5268e3b42e0d5ea.jpg",
+                  "__typename": "ScheduleEventMediaNode"
+                },
+                "__typename": "ScheduleEventMediaNodeEdge"
+              }
+            ],
+            "__typename": "ScheduleEventMediaNodeConnection"
+          },
+          "createdAt": "2024-12-08T12:53:53.310257+00:00",
+          "updatedAt": "2024-12-08T12:57:31.112342+00:00",
+          "__typename": "ScheduleEventNode"
+        },
+        "__typename": "ScheduleEventNodeEdge",
+        "booking_link": "https://book.ganeshyoga.de/#/shop/events/U2NoZWR1bGVFdmVudE5vZGU6MQ==/ticket/U2NoZWR1bGVFdmVudFRpY2tldE5vZGU6MQ==",
+      },
+
+    ],
+    "__typename": "ScheduleEventNodeConnection"
+     }
+    }
+    
+    """
+    today = datetime.datetime.strptime(start_date, d_fmt)
+    until = datetime.datetime.strptime(end_date, d_fmt)
+
+    upcoming_events = []
+
+    # Loop the result until we get date greater than or equal to today
+    for node in data['scheduleEvents']['edges']:
+        event = node['node']
+        event_start_date = datetime.datetime.strptime(event['dateStart']+ ' '+ event['timeStart'], '%Y-%m-%d %H:%M:%S')
+        event_end_date  = datetime.datetime.strptime(event['dateEnd']+ ' '+ event['timeEnd'], '%Y-%m-%d %H:%M:%S')
+        if event_start_date > today and event_end_date < until:
+            row_data = {
+                'date': event['dateStart'],
+                'scheduleType': "event",
+                   'title': event['name'], 
+                   'timeStart': event['timeStart'], 
+                    'timeEnd': event['timeEnd'],
+                    'bookingStatus': "True",
+                    'scheduleItemId': event['id'],
+                    } 
+            
+            upcoming_events.append(row_data)
+
+
+    return upcoming_events
+
+
+
+
+def get_schedule_events(start_date: str, end_date:str) -> list[dict]:
+    data = {
+    "operationName": "ScheduleEvents",
+    "variables": {},
+    "query": "query ScheduleEvents($before: String, $after: String) {\n  scheduleEvents(\n    first: 100\n    before: $before\n    after: $after\n    archived: false\n    displayShop: true\n  ) {\n    pageInfo {\n      hasNextPage\n      hasPreviousPage\n      startCursor\n      endCursor\n      __typename\n    }\n    edges {\n      node {\n        id\n        archived\n        displayPublic\n        displayShop\n        autoSendInfoMail\n        organizationLocation {\n          id\n          name\n          __typename\n        }\n        name\n        tagline\n        preview\n        description\n        organizationLevel {\n          id\n          name\n          __typename\n        }\n        instructor {\n          id\n          fullName\n          __typename\n        }\n        instructor2 {\n          id\n          fullName\n          __typename\n        }\n        dateStart\n        dateEnd\n        timeStart\n        timeEnd\n        infoMailContent\n        scheduleItems {\n          edges {\n            node {\n              id\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        media(first: 1) {\n          pageInfo {\n            hasNextPage\n            hasPreviousPage\n            startCursor\n            endCursor\n            __typename\n          }\n          edges {\n            node {\n              urlImageThumbnailSmall\n              urlImageThumbnailLarge\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        createdAt\n        updatedAt\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
+    }
+
+    with requests.session() as s:
+        res = s.get(getattr(settings, 'COSTASIELLA_DOMAIN') + '/d/csrf')
+        print(res.content)
+        res = s.post(url, json=data)
+        if res.status_code == 200:
+            all_events = filter_all_future_events(data=res.json()['data'], start_date =start_date, end_date=end_date)
+        else:
+            print("We are not able to get any data. Reason: ", res.content)
+            return []
+    
+    return all_events

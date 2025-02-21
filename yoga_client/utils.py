@@ -140,7 +140,7 @@ def sort_filtered_data(data_list: list) -> list:
     
 
 
-def get_upcoming_all(start_date, class_count=10):
+def get_upcoming_all(start_date, class_count=50):
     """ This function will bring number of upcoming classes by class_count
     """
     filtered_event = []
@@ -397,7 +397,7 @@ def get_schedule_events(start_date: str, end_date:str, level:str="") -> list[dic
     return all_events
 
 
-def get_upcoming_classes(start_date, level:str ="", classtype:str ="", class_count=10):
+def get_upcoming_classes(start_date, level:str ="", classtype:str ="", class_count=15):
     """ This function will bring number of upcoming classes by class_count
     """
     upcoming_class_data = []
@@ -419,11 +419,11 @@ def get_upcoming_classes(start_date, level:str ="", classtype:str ="", class_cou
     return upcoming_class_data
 
 
-def get_upcoming_events(start_date, level:str = "", class_count=10):
+def get_upcoming_events(start_date, level:str = "", class_count=15):
     """ This function will bring number of events by class_count
     """
     filtered_event = []
-    end_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=180)).strftime(d_fmt)
+    end_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=365)).strftime(d_fmt)
     filtered_event = get_schedule_events(start_date=start_date, end_date=end_date, level=level)
     if len(filtered_event) > class_count:
         return filtered_event[:class_count]

@@ -8,15 +8,21 @@
 <body>
     <h1> Yoga Classes Filters</h1>
     <form id="filterform" method="get" >
+        <label for="filtertype">Filter </label>
+        <select name="filter" id="filtertype" onchange="changeOption()">
+            <option value="all" selected>All</option>
+            <option value="class">Classes</option>
+            <option value="event">Events</option>
+        </select>
         <label for="classtype">Class Type</label>
-        <select name="class_type" id="classtype">
+        <select name="class_type" id="classtype" disabled>
             <option value="">Select Class Type</option>
             {% for cls_node in data.organizationClasstypes.edges %}
                 <option value="{{cls_node.node.id}}">{{cls_node.node.name}}</option>
             {% endfor %}
         </select>
         <label for="eventlevel">Event Level</label>
-        <select name="event_level" id="eventlevel">
+        <select name="event_level" id="eventlevel" disabled>
             <option value="">Select Class Level</option>
             {% for cls_node in data.organizationLevels.edges %}
                 <option value="{{cls_node.node.id}}">{{cls_node.node.name}}</option>
@@ -29,6 +35,30 @@
     <iframe src="{% url 'index' %}"   width="80%" style="height: 70vh;" id="indexPage" title="Preview"></iframe>
 
     <script>
+        function changeOption() {
+            let myoption = document.getElementById('filtertype');
+            let classes = document.getElementById('classtype');
+            let events = document.getElementById('eventlevel');
+
+            if(myoption.value === 'all'){
+                classes.disabled = true;
+                events.disabled = true;
+            }
+            if(myoption.value === 'event'){
+                 classes.disabled = true;
+                 if(events.disabled){
+                    events.disabled = false;
+                 }
+            }
+            if(myoption.value == 'class'){
+                if(classes.disabled){
+                    classes.disabled = false;
+                }
+                if(events.disabled){
+                    events.disabled = false;
+                }
+            }
+        }
         function copyText(){
             let mytext = document.getElementById('targetUrl');
             mytext.select();
@@ -45,6 +75,9 @@
             }
             if (data.get('event_level')){
                 params.append('event_level', data.get('event_level'))
+            }
+            if (data.get('filter')){
+                params.append('filter', data.get('filter'))
             }
             let newURL = document.location.protocol + '//'+ document.location.host + '/?' + params.toString();            
             document.getElementById('indexPage').setAttribute('src', newURL);

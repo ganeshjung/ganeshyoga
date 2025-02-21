@@ -2,6 +2,7 @@ import requests, datetime
 from django.conf import settings
 from typing import Tuple
 d_fmt = "%Y-%m-%d"
+dt_fmt = "%Y-%m-%d %H:%M:%S"
 url = getattr(settings, 'COSTASIELLA_DOMAIN') + '/d/graphql_app/'
 
 def filter_active_class(data: dict) -> list[dict]:
@@ -109,7 +110,7 @@ def upcoming_classess(start_date: str, level: str = "", classtype: str = '')-> l
     with requests.session() as s:
         res = s.get(getattr(settings, 'COSTASIELLA_DOMAIN') + '/d/csrf')
         print(res.content)
-        res = s.post(url, json=data, headers={"Accept": "application/json", "Content-Type": "application/json"})
+        res = s.post(url, json=data)
         if res.status_code == 200:
             filtered_data = filter_active_class(res.json())
         else:
@@ -119,7 +120,27 @@ def upcoming_classess(start_date: str, level: str = "", classtype: str = '')-> l
         return filtered_data
     
 
-def get_upcoming_classes(start_date, level="", classtype="", class_count=10):
+def sort_filtered_data(data_list: list) -> list:
+    """ this will filter out data based on start datetime 
+    
+    """
+    sorted_list = []
+    mydict = {}
+    for data in data_list:
+        # create key
+        data_key = datetime.datetime.strptime(data['date'] + " " + data['timeStart'], dt_fmt)
+        mydict[data_key.timestamp()] = data
+    
+    # get the sort by keyname
+    for d in sorted(mydict.items()):
+        sorted_list.append(d[1])
+
+
+    return sorted_list
+    
+
+
+def get_upcoming_all(start_date, class_count=10):
     """ This function will bring number of upcoming classes by class_count
     """
     filtered_event = []
@@ -127,7 +148,7 @@ def get_upcoming_classes(start_date, level="", classtype="", class_count=10):
     start_count = 0
     while start_count < class_count:
         # we need to keep looping until we atleast got 10 class for result
-        filtered_data = upcoming_classess(start_date=start_date, level=level, classtype=classtype)
+        filtered_data = upcoming_classess(start_date=start_date, level="", classtype="")
         end_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=7)).strftime(d_fmt)
         filtered_event = get_schedule_events(start_date=start_date, end_date=end_date)
         if len(filtered_data) == 0:
@@ -135,7 +156,7 @@ def get_upcoming_classes(start_date, level="", classtype="", class_count=10):
             break
         else:
             start_count += ( len(filtered_data ) + len(filtered_event))
-            upcoming_class_data += ( filtered_data + filtered_event)
+            upcoming_class_data += sort_filtered_data(filtered_data + filtered_event)
         
         # change, next_start date to 7. Not 6
         start_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=7)).strftime(d_fmt)
@@ -205,7 +226,7 @@ def get_filter_set() -> dict:
     return filter_set
 
 
-def filter_all_future_events(data: dict, start_date: str, end_date: str) -> list[dict]:
+def filter_all_future_events(data: dict, start_date: str, end_date: str, level:str="") -> list[dict]:
     """ This will filter all future upcoming events taking start_date
     
     Sample data:
@@ -310,6 +331,8 @@ def filter_all_future_events(data: dict, start_date: str, end_date: str) -> list
      }
     }
     
+    Need to check that rows comes between start date and end date
+    if level is given, it will filter out all rows matching the level
     """
     today = datetime.datetime.strptime(start_date, d_fmt)
     until = datetime.datetime.strptime(end_date, d_fmt)
@@ -321,26 +344,39 @@ def filter_all_future_events(data: dict, start_date: str, end_date: str) -> list
         event = node['node']
         event_start_date = datetime.datetime.strptime(event['dateStart']+ ' '+ event['timeStart'], '%Y-%m-%d %H:%M:%S')
         event_end_date  = datetime.datetime.strptime(event['dateEnd']+ ' '+ event['timeEnd'], '%Y-%m-%d %H:%M:%S')
-        if event_start_date > today and event_end_date < until:
+        if event_start_date > today and event_end_date < until and not level:
             row_data = {
-                'date': event['dateStart'],
-                'scheduleType': "event",
+                    'date': event['dateStart'],
+                    'scheduleType': "event",
                    'title': event['name'], 
                    'timeStart': event['timeStart'], 
                     'timeEnd': event['timeEnd'],
                     'bookingStatus': "True",
                     'scheduleItemId': event['id'],
-                    } 
-            
+            }
             upcoming_events.append(row_data)
-
+        elif event_start_date > today and event_end_date < until and level:
+            if event['organizationLevel']['id'] == level:
+                row_data = {
+                        'date': event['dateStart'],
+                        'scheduleType': "event",
+                       'title': event['name'], 
+                       'timeStart': event['timeStart'], 
+                        'timeEnd': event['timeEnd'],
+                         'bookingStatus': "True",
+                        'scheduleItemId': event['id'],
+                    }
+            
+                upcoming_events.append(row_data)
+            else:
+                continue
 
     return upcoming_events
 
 
 
 
-def get_schedule_events(start_date: str, end_date:str) -> list[dict]:
+def get_schedule_events(start_date: str, end_date:str, level:str="") -> list[dict]:
     data = {
     "operationName": "ScheduleEvents",
     "variables": {},
@@ -351,10 +387,45 @@ def get_schedule_events(start_date: str, end_date:str) -> list[dict]:
         res = s.get(getattr(settings, 'COSTASIELLA_DOMAIN') + '/d/csrf')
         print(res.content)
         res = s.post(url, json=data)
-        if res.status_code == 200:
-            all_events = filter_all_future_events(data=res.json()['data'], start_date =start_date, end_date=end_date)
+        if res.status_code == 200: 
+
+            all_events = filter_all_future_events(data=res.json()['data'], start_date =start_date, end_date=end_date, level=level)
         else:
             print("We are not able to get any data. Reason: ", res.content)
             return []
     
     return all_events
+
+
+def get_upcoming_classes(start_date, level:str ="", classtype:str ="", class_count=10):
+    """ This function will bring number of upcoming classes by class_count
+    """
+    upcoming_class_data = []
+    start_count = 0
+    while start_count < class_count:
+        # we need to keep looping until we atleast got 10 class for result
+        filtered_data = upcoming_classess(start_date=start_date, level=level, classtype=classtype)
+        if len(filtered_data) == 0:
+            # No data received, we should assume no schedule is uploaded
+            break
+        else:
+            start_count += len(filtered_data ) 
+            upcoming_class_data +=  filtered_data 
+        
+        # change, next_start date to 7. Not 6
+        start_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=7)).strftime(d_fmt)
+
+    
+    return upcoming_class_data
+
+
+def get_upcoming_events(start_date, level:str = "", class_count=10):
+    """ This function will bring number of events by class_count
+    """
+    filtered_event = []
+    end_date = (datetime.datetime.strptime(start_date, d_fmt) + datetime.timedelta(days=180)).strftime(d_fmt)
+    filtered_event = get_schedule_events(start_date=start_date, end_date=end_date, level=level)
+    if len(filtered_event) > class_count:
+        return filtered_event[:class_count]
+  
+    return filtered_event

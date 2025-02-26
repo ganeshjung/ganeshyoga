@@ -333,6 +333,8 @@ def filter_all_future_events(data: dict, start_date: str, end_date: str, level:s
     
     Need to check that rows comes between start date and end date
     if level is given, it will filter out all rows matching the level
+
+    Changes: added new dateEnd in dictionary to adapt new datetime form
     """
     today = datetime.datetime.strptime(start_date, d_fmt)
     until = datetime.datetime.strptime(end_date, d_fmt)
@@ -353,6 +355,8 @@ def filter_all_future_events(data: dict, start_date: str, end_date: str, level:s
                     'timeEnd': event['timeEnd'],
                     'bookingStatus': "True",
                     'scheduleItemId': event['id'],
+                    # For adapting new date and time view
+                    'dateEnd': event['dateEnd'],
             }
             upcoming_events.append(row_data)
         elif event_start_date > today and event_end_date < until and level:
@@ -365,6 +369,8 @@ def filter_all_future_events(data: dict, start_date: str, end_date: str, level:s
                         'timeEnd': event['timeEnd'],
                          'bookingStatus': "True",
                         'scheduleItemId': event['id'],
+                        # For adapting new date and time view
+                        'dateEnd': event['dateEnd'],
                     }
             
                 upcoming_events.append(row_data)
